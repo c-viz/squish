@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bug Squish Dungeon</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #222;
+    color: #eee;
+    margin: 0;
+    padding: 0;
+  }
+  h1 { margin: 10px; }
+  #game-container {
+    display: grid;
+    margin: 20px auto;
+    gap: 0;
+    touch-action: manipulation;
+    padding: 10px;
+    position: relative;
+  }
+  .tile {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    background-size: cover;
+    box-sizing: border-box;
+    background-color: #3a3a3a;
+  }
+  .start { background-image: url('stone.png'); }
+  .bug { background-image: url('bug.png'); }
+  .squished { background-image: url('squish.png'); }
+  .exit { background-image: url('door.png'); }
+
+  /* Hero */
+  .hero {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background-size: cover;
+    transition: transform 0.3s ease, top 0.3s ease, left 0.3s ease;
+    z-index: 10;
+  }
+
+
+  .hero.right {
+    background-image: url('hero_r.png');
+  }
+  .hero.left {
+    background-image: url('hero_l.png');
+  }
+  .hero.up {
+    background-image: url('hero_u.png');
+  }
+  .hero.down {
+    background-image: url('hero_d.png');
+  }
+
+  .hero.jump {
+    transform: scale(1.3);
+  }
+
+  .visited {
+    filter: brightness(50%);
+  }
+
+  button {
+    background-color: #3a3a3a; /* Dark gray base */
+    color: #ffffff; /* White text */
+    border: 2px solid #39ff14; /* Neon green border */
+    border-radius: 8px; /* Rounded corners */
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+
+  button:hover {
+    background-color: #2f2f2f; /* Slightly darker on hover */
+    color: #39ff14; /* Neon green text on hover */
+    box-shadow: 0 0 10px #39ff14; /* Glow effect */
+  }
+
+</style>
+</head>
+<body>
+<h1>Bug Squish Dungeon</h1>
+<p>Squish all the bugs and go to the exit. You can visit a tile only once.</p>
+<div id="buttons">
+  <button onclick="resetGame()">Reset Level</button>
+</div>
+<div id="game-container"></div>
+<script>
+
+function getLevelFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const level = parseInt(params.get('level')) || 1;
+    return level;
+}
+
+
+const n = getLevelFromURL()+2;
+const container = document.getElementById('game-container');
+container.style.gridTemplateColumns = `repeat(${n}, 80px)`;
+
+let grid = [];
+let visited = new Set();
+let current = { x: 0, y: 0 };
+let heroElement;
+
+function createGrid() {
+  container.innerHTML = '';
+  grid = [];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const tile = document.createElement('div');
+      tile.classList.add('tile');
+      if (x === 0 && y === 0) tile.classList.add('start');
+      else if (x === n - 1 && y === n - 1) tile.classList.add('exit');
+      else tile.classList.add('bug');
+      tile.dataset.x = x;
+      tile.dataset.y = y;
+
+      container.appendChild(tile);
+      grid.push(tile);
+    }
+  }
+  addHero();
+  markCurrentTile(current.x, current.y);
+}
+
+function addHero() {
+  heroElement = document.createElement('div');
+  heroElement.classList.add('hero');
+  heroElement.classList.add('right');
+  container.appendChild(heroElement);
+  positionHero(current.x, current.y);
+}
+
+function positionHero(x, y) {
+  const tileSize = 80;
+  heroElement.style.top = `${y * tileSize + 30}px`;
+  heroElement.style.left = `${x * tileSize + 25}px`;
+}
+
+function getTile(x, y) {
+  return grid.find(t => parseInt(t.dataset.x) === x && parseInt(t.dataset.y) === y);
+}
+
+function markCurrentTile(x, y) {
+  grid.forEach(tile => tile.classList.remove('current_tile'));
+  const tile = getTile(x, y);
+  tile.classList.add('current_tile');
+
+  // Squish bug if present
+  if (tile.classList.contains('bug')) {
+    tile.classList.remove('bug');
+    tile.classList.add('squished');
+  }
+}
+
+function move(dx, dy) {
+  const nx = current.x + dx;
+  const ny = current.y + dy;
+  if (nx >= 0 && nx < n && ny >= 0 && ny < n && !(nx === 0 && ny === 0) && !visited.has(`${nx},${ny}`)) {
+    // Mark old tile as visited
+    const oldTile = getTile(current.x, current.y);
+    oldTile.classList.remove('current_tile');
+    oldTile.classList.add('visited');
+    visited.add(`${current.x},${current.y}`);
+
+    current = { x: nx, y: ny };
+
+    // Rotate hero based on direction
+    //heroElement.style.transform = `rotate(${angle}deg)`;
+    heroElement.classList.remove('right');
+    heroElement.classList.remove('left');
+    heroElement.classList.remove('up');
+    heroElement.classList.remove('down');
+    if (dx === 1) heroElement.classList.add('right');      // Right
+    else if (dx === -1) heroElement.classList.add('left'); // Left
+    else if (dy === 1) heroElement.classList.add('down');  // Down
+    else if (dy === -1) heroElement.classList.add('up');   // Up
+
+
+    heroElement.classList.add('jump');
+    positionHero(nx, ny);
+    setTimeout(() => {
+      heroElement.classList.remove('jump')
+      markCurrentTile(nx, ny);
+    }, 200);
+
+    checkWin();
+
+
+  }
+}
+
+function checkWin() {
+  if (visited.size === n * n - 1 && current.x === n - 1 && current.y === n - 1) {
+    const nextLevelBtn = document.createElement('button');
+    const nextLevel = n - 1;
+    nextLevelBtn.id = "btn_nextLevel";
+    nextLevelBtn.textContent = 'Go to Next Level';
+    nextLevelBtn.onclick = function() {
+        window.location.search = '?level=' + nextLevel;
+    };
+    document.getElementById('buttons').appendChild(nextLevelBtn);
+  }
+}
+
+function resetGame() {
+  visited.clear();
+  current = { x: 0, y: 0 };
+  createGrid();
+  const elementToRemove = document.getElementById('btn_nextLevel');
+  if (elementToRemove) {
+      elementToRemove.remove();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') move(0, -1);
+  if (e.key === 'ArrowDown') move(0, 1);
+  if (e.key === 'ArrowLeft') move(-1, 0);
+  if (e.key === 'ArrowRight') move(1, 0);
+});
+
+container.addEventListener('click', e => {
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  const x = parseInt(tile.dataset.x);
+  const y = parseInt(tile.dataset.y);
+  if (Math.abs(x - current.x) + Math.abs(y - current.y) === 1) {
+    move(x - current.x, y - current.y);
+  }
+});
+
+createGrid();
+</script>
+</body>
+</html>
