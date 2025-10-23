@@ -106,6 +106,7 @@ function getLevelFromURL() {
 
 const n = getLevelFromURL()+2;
 const container = document.getElementById('game-container');
+container.style.width = `${80*n}px`;
 container.style.gridTemplateColumns = `repeat(${n}, 80px)`;
 
 let grid = [];
