@@ -86,6 +86,74 @@
     box-shadow: 0 0 10px #39ff14; /* Glow effect */
   }
 
+
+
+  /* Mobile controls */
+  /* Mobile controls */
+  #mobile-controls {
+      display: none;
+      position: relative;
+      width: 150px;
+      height: 150px;
+      margin-top: 30px;
+      left: 50%;
+      transform: translate(-50%, 0);
+  }
+
+  .arrow {
+      width: 50px;
+      height: 50px;
+      background-color: #3a3a3a;
+      border: 2px solid #39ff14;
+      border-radius: 8px;
+      position: absolute;
+      cursor: pointer;
+  }
+
+  .arrow::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      border-style: solid;
+  }
+
+  .arrow.up::before {
+      border-width: 0 15px 25px 15px;
+      border-color: transparent transparent #39ff14 transparent;
+  }
+
+  .arrow.down::before {
+      border-width: 25px 15px 0 15px;
+      border-color: #39ff14 transparent transparent transparent;
+  }
+
+  .arrow.left::before {
+      border-width: 15px 25px 15px 0;
+      border-color: transparent #39ff14 transparent transparent;
+  }
+
+  .arrow.right::before {
+      border-width: 15px 0 15px 25px;
+      border-color: transparent transparent transparent #39ff14;
+  }
+
+  /* Position arrows on rotated square corners */
+  .arrow.up { top: 0; left: 50%; transform: translate(-50%, 0); }
+  .arrow.down { bottom: 0; left: 50%; transform: translate(-50%, 0); }
+  .arrow.left { left: 0; top: 50%; transform: translate(0, -50%); }
+  .arrow.right { right: 0; top: 50%; transform: translate(0, -50%); }
+
+  @media (max-width: 600px) {
+      #mobile-controls {
+          display: block;
+      }
+  }
+
+
 </style>
 </head>
 <body>
@@ -95,6 +163,13 @@
   <button onclick="resetGame()">Reset Level</button>
 </div>
 <div id="game-container"></div>
+<div id="mobile-controls">
+  <button class="arrow up" onclick="move(0, -1)"></button>
+  <button class="arrow left" onclick="move(-1, 0)"></button>
+  <button class="arrow right" onclick="move(1, 0)"></button>
+  <button class="arrow down" onclick="move(0, 1)"></button>
+</div>
+
 <script>
 
 function getLevelFromURL() {
@@ -168,6 +243,25 @@ function markCurrentTile(x, y) {
 function move(dx, dy) {
   const nx = current.x + dx;
   const ny = current.y + dy;
+
+  // Rotate hero based on direction
+  //heroElement.style.transform = `rotate(${angle}deg)`;
+  heroElement.classList.remove('right');
+  heroElement.classList.remove('left');
+  heroElement.classList.remove('up');
+  heroElement.classList.remove('down');
+  if (dx === 1) heroElement.classList.add('right');      // Right
+  else if (dx === -1) heroElement.classList.add('left'); // Left
+  else if (dy === 1) heroElement.classList.add('down');  // Down
+  else if (dy === -1) heroElement.classList.add('up');   // Up
+
+  heroElement.classList.add('jump');
+  setTimeout(() => {
+    heroElement.classList.remove('jump')
+    markCurrentTile(nx, ny);
+  }, 200);
+
+
   if (nx >= 0 && nx < n && ny >= 0 && ny < n && !(nx === 0 && ny === 0) && !visited.has(`${nx},${ny}`)) {
     // Mark old tile as visited
     const oldTile = getTile(current.x, current.y);
@@ -176,26 +270,7 @@ function move(dx, dy) {
     visited.add(`${current.x},${current.y}`);
 
     current = { x: nx, y: ny };
-
-    // Rotate hero based on direction
-    //heroElement.style.transform = `rotate(${angle}deg)`;
-    heroElement.classList.remove('right');
-    heroElement.classList.remove('left');
-    heroElement.classList.remove('up');
-    heroElement.classList.remove('down');
-    if (dx === 1) heroElement.classList.add('right');      // Right
-    else if (dx === -1) heroElement.classList.add('left'); // Left
-    else if (dy === 1) heroElement.classList.add('down');  // Down
-    else if (dy === -1) heroElement.classList.add('up');   // Up
-
-
-    heroElement.classList.add('jump');
     positionHero(nx, ny);
-    setTimeout(() => {
-      heroElement.classList.remove('jump')
-      markCurrentTile(nx, ny);
-    }, 200);
-
     checkWin();
 
 
